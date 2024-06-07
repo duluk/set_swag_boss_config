@@ -9,27 +9,28 @@
 PROG=$(basename $0)
 MOVE_CMD="/usr/bin/mv"
 COPY_CMD="/usr/bin/cp"
-COPY_OPTS="--remove-destination"
-LINK_OPTS="-sf"
-PRESETS_DIR="/mnt/c/SPT/my_presets/SWAG"
-BACKUP_DIR="${PRESETS_DIR}/backups"
+COPY_OPTS="-v --remove-destination"
+LINK_OPTS="-vsf"
+
+HIGHER_CHANCE_DEFAULT=75
+DECENT_CHANCE_DEFAULT=50
+
+BACKUP_DIR="/mnt/c/SPT/Backups/SWAG/bossConfig"
 SWAG_DIR="/mnt/c/SPT/SPTARKOV/user/mods/SWAG"
 SWAG_CONFIG_DIR="${SWAG_DIR}/config"
 BOSS_CONFIG_FILE="bossConfig.json"
 SWAG_BOSS_CONFIG="${SWAG_CONFIG_DIR}/${BOSS_CONFIG_FILE}"
-SWAG_BOSS_ORIG="${PRESETS_DIR}/${BOSS_CONFIG_FILE}.orig"
-HIGHER_BOSS_CHANCES="${PRESETS_DIR}/${BOSS_CONFIG_FILE}.higher_boss_chances"
-DECENT_BOSS_CHANCES="${PRESETS_DIR}/${BOSS_CONFIG_FILE}.decent_boss_chances"
+SWAG_BOSS_ORIG="${BACKUP_DIR}/${BOSS_CONFIG_FILE}.orig"
 
 show_usage() {
-  echo "Usage: $PROG {all_bosses map|higher_chances|decent_chances|set_chance boss map chance|set_current_chances chance|show_chances|original}"
+  echo "Usage: $PROG {all_bosses map|higher_chance [chance]|decent_chance [chance]|set_boss_chance boss map chance|set_current_chance chance|show_chance|original}"
   echo "Example: $PROG all_bosses customs (100% all bosses on given map)"
-  echo "         $PROG higher_chances (75% boss chances)"
-  echo "         $PROG decent_chances (50% boss chances)"
-  echo "         $PROG set_chance gluhar customs 50"
-  echo "         $PROG set_current_chances 75"
-  echo "         $PROG show_chances gluhar"
-  echo "         $PROG original"
+  echo "         $PROG higher_chance [chance, optional] (${HIGHER_CHANCE_DEFAULT}% default)"
+  echo "         $PROG decent_chance [chance, optional] (${DECENT_CHANCE_DEFAULT}% default)"
+  echo "         $PROG set_boss_chance gluhar customs 50"
+  echo "         $PROG set_current_chance 75"
+  echo "         $PROG show_chance gluhar"
+  echo "         $PROG original (restore original file)"
   exit 1
 }
 
@@ -37,9 +38,14 @@ if [ "$#" -lt 1 ]; then
   show_usage
 fi
 
+mkdir -p $BACKUP_DIR
 if [ ! -e $SWAG_BOSS_ORIG ]; then
-  echo "There is no original of $SWAG_BOSS_CONFIG"
+  echo "There is no original of $SWAG_BOSS_CONFIG in $BACKUP_DIR"
   echo "Run 'cp $SWAG_BOSS_CONFIG $SWAG_BOSS_ORIG' NOW!"
+  echo "This will ensure whatever this script does will not destroy the original config file."
+  echo "(you could always restore from the SWAG+Donuts archive file though)"
+  echo "If you have already created an original file, just modify SWAG_BOSS_ORIG in the script"
+  echo "to point to it."
   exit 1
 fi
 
@@ -72,21 +78,34 @@ backup_config() {
   ls -1t "$BACKUP_DIR" | tail -n +11 | xargs -I {} rm -f "$BACKUP_DIR/{}"
 }
 
-link_all_bosses_map() {
+set_all_bosses_map() {
   local map=$1
 
-  all_bosses_map_file="${PRESETS_DIR}/${BOSS_CONFIG_FILE}.${map}_all_bosses"
-  if [ ! -e $all_bosses_map_file ]; then
-    echo "$all_bosses_map_file does not exist"
+  tmpfile="tmp.$$.json"
+  jq --arg map $map '
+  .Bosses |= with_entries(
+    if .value | type == "object" then
+      if has($map) then
+        .value[$map] = 100
+      else
+        .
+      end
+    else
+      .
+    end
+  )' $SWAG_BOSS_CONFIG > $tmpfile
+  if [ $? -ne 0 ]; then
+    echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
+    echo "Not removing tmpfile: $tmpfile"
     exit 1
   fi
 
-  echo "$COPY_CMD $LINK_OPTS $all_bosses_map_file $SWAG_BOSS_CONFIG"
-  $COPY_CMD $LINK_OPTS $all_bosses_map_file $SWAG_BOSS_CONFIG
+  validate_json $tmpfile
+  $MOVE_CMD $tmpfile $SWAG_BOSS_CONFIG
   if [ $? -eq 0 ]; then
-    echo "Set $map to have all bosses spawn with 100% rate"
+    echo "Set $boss spawn chance on $map to $chance"
   else
-    echo "Failed to link $all_bosses_map_file to ./${BOSS_CONFIG_FILE}"
+    echo "Faile to set spawn chance for $boss on $map"
   fi
 }
 
@@ -96,15 +115,19 @@ set_chance() {
   local chance=$3
 
   tmpfile="tmp.$$.json"
-  jq --arg boss "$boss" --arg map "$map" --argjson chance "$chance" '.Bosses[$boss][$map] = $chance' $SWAG_BOSS_CONFIG > $tmpfile
+  jq --arg boss $boss --arg map $map --argjson chance $chance '
+  if .Bosses[$boss] | has($map) then
+      .Bosses[$boss][$map] = $chance
+  else
+      .
+  end' $SWAG_BOSS_CONFIG > $tmpfile
   if [ $? -ne 0 ]; then
-    echo "Error modifying json config with jq"
+    echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
     echo "Not removing tmpfile: $tmpfile"
     exit 1
   fi
 
   validate_json $tmpfile
-  echo "$MOVE_CMD $tmpfile $SWAG_BOSS_CONFIG"
   $MOVE_CMD $tmpfile $SWAG_BOSS_CONFIG
   if [ $? -eq 0 ]; then
     echo "Set $boss spawn chance on $map to $chance"
@@ -114,11 +137,11 @@ set_chance() {
 }
 
 # Set any existing (non-zero) chances in the file to the number provided
-set_current_chances() {
+set_current_chance() {
   local new_chance=$1
 
   tmpfile="tmp.$$.json"
-  jq --argjson new_chance "$new_chance" '
+  jq --argjson new_chance $new_chance '
   .Bosses |= with_entries(
       if .value | type == "object" then
           .value |= with_entries(
@@ -132,17 +155,22 @@ set_current_chances() {
           .
       end
   )' $SWAG_BOSS_CONFIG > $tmpfile
+  if [ $? -ne 0 ]; then
+    echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
+    echo "Not removing tmpfile: $tmpfile"
+    exit 1
+  fi
+
   validate_json $tmpfile
-  echo "$MOVE_CMD $tmpfile $SWAG_BOSS_CONFIG"
   $MOVE_CMD $tmpfile $SWAG_BOSS_CONFIG
   if [ $? -eq 0 ]; then
-    echo "Set existing non-zero spawn chances to $new_chance"
+    echo "Set existing non-zero spawn chance to $new_chance"
   else
-    echo "Failed to set existing non-zero spawn chances"
+    echo "Failed to set existing non-zero spawn chance"
   fi
 }
 
-show_chances() {
+show_chance() {
   local boss=$1
   echo -n "$boss: "
   jq --arg boss "$boss" '.Bosses[$boss]' $SWAG_BOSS_CONFIG
@@ -157,13 +185,12 @@ validate_json $SWAG_BOSS_CONFIG
 # be stored somewhere before ever running this script. And never changed. All
 # this does is back up the current config, which could be all bosses on
 # shoreline or whatever.
-if [ "$1" != "show_chances" ]; then
+if [ "$1" != "show_chance" ]; then
   backup_config
 fi
 
 case $choice in
   original|default)
-    echo "$COPY_CMD $COPY_OPTS $SWAG_BOSS_ORIG $SWAG_BOSS_CONFIG"
     $COPY_CMD $COPY_OPTS $SWAG_BOSS_ORIG $SWAG_BOSS_CONFIG
     if [ $? -ne 0 ]; then
       echo "Failed to copy $SWAG_BOSS_ORIG to $SWAG_BOSS_CONFIG"
@@ -176,21 +203,16 @@ case $choice in
     fi
 
     map=$2
-    link_all_bosses_map "$map"
+    echo "Setting $map to 100% for all bosses"
+    set_all_bosses_map $map
     ;;
-  higher_chances)
-    echo "$COPY_CMD $LINK_OPTS $HIGHER_BOSS_CHANCES $SWAG_BOSS_CONFIG"
-    $COPY_CMD $LINK_OPTS $HIGHER_BOSS_CHANCES $SWAG_BOSS_CONFIG
-    if [ $? -ne 0 ]; then
-      echo "Failed to link $HIGHER_BOSS_CHANCES to $SWAG_BOSS_CONFIG"
-    fi
+  higher_chance)
+    new_chance=${2:-$HIGHER_CHANCE_DEFAULT}
+    set_current_chance $new_chance
     ;;
-  decent_chances)
-    echo "$COPY_CMD $LINK_OPTS $DECENT_BOSS_CHANCES $SWAG_BOSS_CONFIG"
-    $COPY_CMD $LINK_OPTS $DECENT_BOSS_CHANCES $SWAG_BOSS_CONFIG
-    if [ $? -ne 0 ]; then
-      echo "Failed to link $DECENT_BOSS_CHANCES to $SWAG_BOSS_CONFIG"
-    fi
+  decent_chance)
+    new_chance=${2:-$DECENT_CHANCE_DEFAULT}
+    set_current_chance $new_chance
     ;;
   set_chance)
     if [ "$#" -ne 4 ]; then
@@ -203,24 +225,24 @@ case $choice in
     chance=$4
     set_chance $boss $map $chance
     ;;
-  set_current_chances)
+  set_current_chance)
     # Check if one argument is provided
     if [ "$#" -ne 2 ]; then
-      echo "Error: set_current_chances requires one argument (new chance value)"
+      echo "Error: set_current_chance requires one argument (new chance value)"
       show_usage
     fi
 
     new_chance=$2
-    set_current_chances $new_chance
+    set_current_chance $new_chance
     ;;
-  show_chances)
+  show_chance)
     if [ "$#" -ne 2 ]; then
-      echo "Error: show_chances requires one argument (boss)"
+      echo "Error: show_chance requires one argument (boss)"
       show_usage
     fi
 
     boss=$2
-    show_chances $boss
+    show_chance $boss
     ;;
   *)
     echo "Invalid option: $choice"
