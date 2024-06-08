@@ -66,13 +66,13 @@ show_usage() {
 }
 
 is_valid_map() {
-    local map=$1
-    for valid_map in "${VALID_MAPS[@]}"; do
-        if [ "$map" == "$valid_map" ]; then
-            return 0
-        fi
-    done
-    return 1
+  local map=$1
+  for valid_map in "${VALID_MAPS[@]}"; do
+    if [ "$map" == "$valid_map" ]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 list_bosses() {
