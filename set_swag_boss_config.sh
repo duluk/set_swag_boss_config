@@ -128,9 +128,16 @@ backup_config() {
 # script and then copied to $SWAG_BOSS_CONFIG at the succesful end. Maybe a
 # future change. This is fine. It's not going to be a noticeable slowdown in
 # the script's speed.
-set_useGlobalBossSpawnChance_false() {
+# Note: this needs to be true, per this comment in the SPT Discord from sheepy:
+# "if it false, the chances are dictated by the individual boss config files.
+# if it's on, as it is by default, the chances in bossConfig.json apply"
+# Until I mess with the individual bosss config files, for what this script is
+# doing, it needs to be true.
+set_useGlobalBossSpawnChance() {
+  local enable=$1
+
   tmpfile="tmp.$$.json"
-  jq '.Bosses.useGlobalBossSpawnChance = false' $SWAG_BOSS_CONFIG > $tmpfile
+  jq --arg enable $enable '.Bosses.useGlobalBossSpawnChance = $enable' $SWAG_BOSS_CONFIG > $tmpfile
   if [ $? -ne 0 ]; then
     echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
     echo "Not removing tmpfile: $tmpfile"
@@ -305,12 +312,12 @@ case $choice in
     map=$2
     echo "Setting $map to 100% for all bosses"
     set_all_bosses_map $map
-    set_useGlobalBossSpawnChance_false
+    set_useGlobalBossSpawnChance "true"
     ;;
   decent_chance)
     new_chance=${2:-$DECENT_CHANCE_DEFAULT}
     set_current_chance $new_chance
-    set_useGlobalBossSpawnChance_false
+    set_useGlobalBossSpawnChance "true"
     ;;
   set_boss_chance)
     if [ "$#" -ne 4 ]; then
@@ -322,7 +329,7 @@ case $choice in
     map=$3
     chance=$4
     set_boss_chance $boss $map $chance
-    set_useGlobalBossSpawnChance_false
+    set_useGlobalBossSpawnChance "true"
     ;;
   set_current_chance)
     # Check if one argument is provided
@@ -333,7 +340,7 @@ case $choice in
 
     new_chance=$2
     set_current_chance $new_chance
-    set_useGlobalBossSpawnChance_false
+    set_useGlobalBossSpawnChance "true"
     ;;
   show_chance)
     if [ "$#" -ne 2 ]; then
