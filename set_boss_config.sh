@@ -131,15 +131,11 @@ set_all_bosses_map() {
     tmpfile="tmp.$$.json"
     jq --arg map $map '
     .Bosses |= with_entries(
-    if .value | type == "object" then
-      if has($map) then
+      if .value | type == "object" then
         .value[$map] = 100
       else
         .
       end
-    else
-      .
-    end
     )' $SWAG_BOSS_CONFIG > $tmpfile
     if [ $? -ne 0 ]; then
       echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
@@ -154,9 +150,9 @@ set_all_bosses_map() {
   validate_json $tmpfile
   $MOVE_CMD $tmpfile $SWAG_BOSS_CONFIG
   if [ $? -eq 0 ]; then
-    echo "Set $boss spawn chance on $map to $chance"
+    echo "Set all bosses on $map to 100%"
   else
-    echo "Faile to set spawn chance for $boss on $map"
+    echo "Failed to set all bosses on $map to 100%"
   fi
 }
 
