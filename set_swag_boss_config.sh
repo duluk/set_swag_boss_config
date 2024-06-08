@@ -124,6 +124,27 @@ backup_config() {
   ls -1t "$BACKUP_DIR" | tail -n +11 | xargs -I {} rm -f "$BACKUP_DIR/{}"
 }
 
+# TODO: I should probably have a global tmpfile that is modified through the
+# script and then copied to $SWAG_BOSS_CONFIG at the succesful end. Maybe a
+# future change. This is fine. It's not going to be a noticeable slowdown in
+# the script's speed.
+set_useGlobalBossSpawnChance_false() {
+  tmpfile="tmp.$$.json"
+  jq '.Bosses.useGlobalBossSpawnChance = false' $SWAG_BOSS_CONFIG > $tmpfile
+  if [ $? -ne 0 ]; then
+    echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
+    echo "Not removing tmpfile: $tmpfile"
+    exit 1
+  fi
+
+  validate_json $tmpfile
+  $MOVE_CMD $tmpfile $SWAG_BOSS_CONFIG
+  if [ $? -ne 0 ]; then
+    echo "Failed to update useGlobalBossSpawnChance"
+    exit 1
+  fi
+}
+
 set_all_bosses_map() {
   local map=$1
 
@@ -284,10 +305,12 @@ case $choice in
     map=$2
     echo "Setting $map to 100% for all bosses"
     set_all_bosses_map $map
+    set_useGlobalBossSpawnChance_false
     ;;
   decent_chance)
     new_chance=${2:-$DECENT_CHANCE_DEFAULT}
     set_current_chance $new_chance
+    set_useGlobalBossSpawnChance_false
     ;;
   set_boss_chance)
     if [ "$#" -ne 4 ]; then
@@ -299,6 +322,7 @@ case $choice in
     map=$3
     chance=$4
     set_boss_chance $boss $map $chance
+    set_useGlobalBossSpawnChance_false
     ;;
   set_current_chance)
     # Check if one argument is provided
@@ -309,6 +333,7 @@ case $choice in
 
     new_chance=$2
     set_current_chance $new_chance
+    set_useGlobalBossSpawnChance_false
     ;;
   show_chance)
     if [ "$#" -ne 2 ]; then
