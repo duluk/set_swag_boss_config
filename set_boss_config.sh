@@ -211,17 +211,17 @@ set_current_chance() {
   tmpfile="tmp.$$.json"
   jq --argjson new_chance $new_chance '
   .Bosses |= with_entries(
-      if .value | type == "object" then
-          .value |= with_entries(
-              if .value != 0 then
-                  .value = $new_chance
-              else
-                  .
-              end
-          )
-      else
+    if .value | type == "object" then
+      .value |= with_entries(
+        if .value != 0 then
+          .value = $new_chance
+        else
           .
-      end
+        end
+      )
+    else
+      .
+    end
   )' $SWAG_BOSS_CONFIG > $tmpfile
   if [ $? -ne 0 ]; then
     echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
