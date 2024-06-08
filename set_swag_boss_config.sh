@@ -52,7 +52,7 @@ VALID_MAPS=(
 
 show_usage() {
   local valid_maps_list=$(IFS=, ; echo "${VALID_MAPS[*]}" | sed 's/,/, /g')
-  echo "Usage: $PROG {all_bosses map|set_boss_chance boss map chance|set_current_chance chance|show_chance boss_or_map|original}"
+  echo "Usage: $PROG {all_bosses map|set_boss_chance boss map chance|set_current_chance chance|show_chance boss_or_map|list_boss_chances|original}"
   echo "Valid maps: $valid_maps_list"
   echo ""
   echo "Examples: $PROG all_bosses customs (100% all bosses on given map)"
@@ -61,6 +61,7 @@ show_usage() {
   echo "          $PROG set_current_chance 75 (change any existing percentage to 75)"
   echo "          $PROG show_chance gluhar"
   echo "          $PROG show_chance customs"
+  echo "          $PROG list_boss_chances"
   echo "          $PROG original (restore original file)"
   exit 1
 }
@@ -77,6 +78,17 @@ is_valid_map() {
 
 list_bosses() {
   jq '.Bosses | keys' $SWAG_BOSS_CONFIG
+}
+
+list_boss_chances() {
+    jq '
+    .Bosses
+    | to_entries
+    | map(select(.key != "useGlobalBossSpawnChance"))
+    | map({
+        boss: .key,
+        maps: (.value | to_entries | map(select(.value != 0)) | from_entries)
+    })' $SWAG_BOSS_CONFIG
 }
 
 # Verify that at least one positional argument was given
@@ -350,6 +362,9 @@ case $choice in
 
     boss_or_map=$2
     show_chance $boss_or_map
+    ;;
+  list_boss_chances)
+    list_boss_chances
     ;;
   *)
     echo "Invalid option: $choice"
