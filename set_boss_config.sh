@@ -22,18 +22,64 @@ BOSS_CONFIG_FILE="bossConfig.json"
 SWAG_BOSS_CONFIG="${SWAG_CONFIG_DIR}/${BOSS_CONFIG_FILE}"
 SWAG_BOSS_ORIG="${BACKUP_DIR}/${BOSS_CONFIG_FILE}.orig"
 
+VALID_BOSSES=(
+  "gluhar"
+  "goons"
+  "kaban"
+  "killa"
+  "kolontay"
+  "reshala"
+  "sanitar"
+  "shturman"
+  "tagilla"
+  "zryachiy"
+)
+
+VALID_MAPS=(
+  "customs"
+  "factory"
+  "factory_night"
+  "groundzero"
+  "interchange"
+  "laboratory"
+  "lighthouse"
+  "reserve"
+  "shoreline"
+  "streets"
+  "woods"
+  "all"
+)
+
 show_usage() {
-  echo "Usage: $PROG {all_bosses map|higher_chance [chance]|decent_chance [chance]|set_boss_chance boss map chance|set_current_chance chance|show_chance|original}"
-  echo "Example: $PROG all_bosses customs (100% all bosses on given map)"
-  echo "         $PROG higher_chance [chance, optional] (${HIGHER_CHANCE_DEFAULT}% default)"
-  echo "         $PROG decent_chance [chance, optional] (${DECENT_CHANCE_DEFAULT}% default)"
-  echo "         $PROG set_boss_chance gluhar customs 50"
-  echo "         $PROG set_current_chance 75"
-  echo "         $PROG show_chance gluhar"
-  echo "         $PROG original (restore original file)"
+  local valid_maps_list=$(IFS=, ; echo "${VALID_MAPS[*]}" | sed 's/,/, /g')
+  echo "Usage: $PROG {all_bosses map|set_boss_chance boss map chance|set_current_chance chance|show_chance boss_or_map|original}"
+  echo "Valid maps: $valid_maps_list"
+  echo ""
+  echo "Examples: $PROG all_bosses customs (100% all bosses on given map)"
+  echo "          $PROG set_boss_chance gluhar customs 50"
+  echo "          $PROG set_boss_chance gluhar all 100 (gluhar will spawn on all maps)"
+  echo "          $PROG set_current_chance 75 (change any existing percentage to 75)"
+  echo "          $PROG show_chance gluhar"
+  echo "          $PROG show_chance customs"
+  echo "          $PROG original (restore original file)"
   exit 1
 }
 
+is_valid_map() {
+    local map=$1
+    for valid_map in "${VALID_MAPS[@]}"; do
+        if [ "$map" == "$valid_map" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+list_bosses() {
+  jq '.Bosses | keys' $SWAG_BOSS_CONFIG
+}
+
+# Verify that at least one positional argument was given
 if [ "$#" -lt 1 ]; then
   show_usage
 fi
@@ -81,9 +127,10 @@ backup_config() {
 set_all_bosses_map() {
   local map=$1
 
-  tmpfile="tmp.$$.json"
-  jq --arg map $map '
-  .Bosses |= with_entries(
+  if is_valid_map $map; then
+    tmpfile="tmp.$$.json"
+    jq --arg map $map '
+    .Bosses |= with_entries(
     if .value | type == "object" then
       if has($map) then
         .value[$map] = 100
@@ -93,10 +140,14 @@ set_all_bosses_map() {
     else
       .
     end
-  )' $SWAG_BOSS_CONFIG > $tmpfile
-  if [ $? -ne 0 ]; then
-    echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
-    echo "Not removing tmpfile: $tmpfile"
+    )' $SWAG_BOSS_CONFIG > $tmpfile
+    if [ $? -ne 0 ]; then
+      echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
+      echo "Not removing tmpfile: $tmpfile"
+      exit 1
+    fi
+  else
+    echo "Invalid map: $map. Valid maps: ${VALID_MAPS[*]}"
     exit 1
   fi
 
@@ -109,22 +160,43 @@ set_all_bosses_map() {
   fi
 }
 
-set_chance() {
+set_boss_chance() {
   local boss=$1
   local map=$2
   local chance=$3
 
   tmpfile="tmp.$$.json"
-  jq --arg boss $boss --arg map $map --argjson chance $chance '
-  if .Bosses[$boss] | has($map) then
-      .Bosses[$boss][$map] = $chance
-  else
+  if [ "$map" == "all" ]; then
+    jq --arg boss $boss --argjson chance $chance '
+    .Bosses[$boss] |= with_entries(
+    if .value | type == "number" then
+      .value = $chance
+    else
       .
-  end' $SWAG_BOSS_CONFIG > $tmpfile
-  if [ $? -ne 0 ]; then
-    echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
-    echo "Not removing tmpfile: $tmpfile"
-    exit 1
+    end
+    )' $SWAG_BOSS_CONFIG > $tmpfile
+    if [ $? -ne 0 ]; then
+      echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
+      echo "Not removing tmpfile: $tmpfile"
+      exit 1
+    fi
+  else
+    if is_valid_map $map; then
+      jq --arg boss $boss --arg map $map --argjson chance $chance '
+      if .Bosses[$boss] | has($map) then
+        .Bosses[$boss][$map] = $chance
+      else
+        .
+      end' $SWAG_BOSS_CONFIG > $tmpfile
+      if [ $? -ne 0 ]; then
+        echo "Error modifying $SWAG_BOSS_CONFIG config with jq"
+        echo "Not removing tmpfile: $tmpfile"
+        exit 1
+      fi
+    else
+      echo "Invalid map: $map. Valid maps: ${VALID_MAPS[*]}"
+      exit 1
+    fi
   fi
 
   validate_json $tmpfile
@@ -171,9 +243,20 @@ set_current_chance() {
 }
 
 show_chance() {
-  local boss=$1
-  echo -n "$boss: "
-  jq --arg boss "$boss" '.Bosses[$boss]' $SWAG_BOSS_CONFIG
+  local boss_or_map=$1
+
+  echo -n "$boss_or_map: "
+  if [[ " ${VALID_BOSSES[*]} " == *" $boss_or_map "* ]]; then
+    jq --arg boss "$boss_or_map" '.Bosses[$boss]' $SWAG_BOSS_CONFIG
+  elif [[ " ${VALID_MAPS[*]} " == *" $boss_or_map "* ]]; then
+    jq --arg map "$boss_or_map" '
+    .Bosses | to_entries | map(select(.value | type == "object") | {(.key): .value[$map]}) | add' $SWAG_BOSS_CONFIG
+  else
+    echo "Invalid boss or map: $boss_or_map"
+    echo "Valid bosses are: ${VALID_BOSSES[*]}"
+    echo "Available maps are: ${VALID_MAPS[*]}"
+    exit 1
+  fi
 }
 
 # Validate the current bossConfig.json file before continuing...it could be
@@ -206,24 +289,20 @@ case $choice in
     echo "Setting $map to 100% for all bosses"
     set_all_bosses_map $map
     ;;
-  higher_chance)
-    new_chance=${2:-$HIGHER_CHANCE_DEFAULT}
-    set_current_chance $new_chance
-    ;;
   decent_chance)
     new_chance=${2:-$DECENT_CHANCE_DEFAULT}
     set_current_chance $new_chance
     ;;
-  set_chance)
+  set_boss_chance)
     if [ "$#" -ne 4 ]; then
-      echo "Error: set_chance requires 3 arguments: boss map chance"
+      echo "Error: set_boss_chance requires 3 arguments: boss map chance"
       show_usage
     fi
 
     boss=$2
     map=$3
     chance=$4
-    set_chance $boss $map $chance
+    set_boss_chance $boss $map $chance
     ;;
   set_current_chance)
     # Check if one argument is provided
@@ -237,12 +316,12 @@ case $choice in
     ;;
   show_chance)
     if [ "$#" -ne 2 ]; then
-      echo "Error: show_chance requires one argument (boss)"
+      echo "Error: show_chance requires one argument (boss or map)"
       show_usage
     fi
 
-    boss=$2
-    show_chance $boss
+    boss_or_map=$2
+    show_chance $boss_or_map
     ;;
   *)
     echo "Invalid option: $choice"
