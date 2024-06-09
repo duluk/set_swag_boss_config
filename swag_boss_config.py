@@ -348,6 +348,7 @@ class BossConfigApp:
             with open(self.config_file.get(), 'r') as file:
                 self.config_data = json.load(file)
             self.list_boss_chances()  # Automatically display the boss chances
+            self.notification_label.config(text=f"Loaded {self.config_file_path}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load configuration file: {e}")
 
