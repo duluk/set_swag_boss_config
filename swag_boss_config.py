@@ -264,7 +264,6 @@ class BossConfigApp:
             messagebox.showerror("Error", "No configuration data loaded.")
 
     def set_chance_for_all_bosses(self):
-
         if self.config_data:
             map_name = self.map_entry.get()
             chance = int(self.all_bosses_chance_entry.get())
@@ -281,11 +280,11 @@ class BossConfigApp:
                     if isinstance(self.config_data['Bosses'][boss], dict):
                         for valid_map in self.valid_maps:
                             if valid_map != "all" and valid_map in self.config_data['Bosses'][boss]:
-                                self.config_data['Bosses'][boss][valid_map] = 100
+                                self.config_data['Bosses'][boss][valid_map] = chance
             else:
                 for boss in self.config_data['Bosses']:
                     if isinstance(self.config_data['Bosses'][boss], dict) and map_name in self.config_data['Bosses'][boss]:
-                        self.config_data['Bosses'][boss][map_name] = 100
+                        self.config_data['Bosses'][boss][map_name] = chance
             self.list_boss_chances()  # Update the output box
         else:
             messagebox.showerror("Error", "No configuration data loaded.")
