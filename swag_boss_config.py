@@ -70,6 +70,18 @@ class BossConfigApp:
 
         # Default configuration
         self.defaults = {
+            "TotalBossesPerMap": {
+                "factory": -1,
+                "factory_night": -1,
+                "customs": -1,
+                "woods": -1,
+                "shoreline": -1,
+                "lighthouse": -1,
+                "reserve": -1,
+                "interchange": -1,
+                "laboratory": -1,
+                "streets": -1
+            },
             "Bosses": {
                 "useGlobalBossSpawnChance": True,
                 "gluhar": {"reserve": 35},
@@ -82,18 +94,6 @@ class BossConfigApp:
                 "shturman": {"woods": 15},
                 "tagilla": {"factory": 35, "factory_night": 35},
                 "zryachiy": {"lighthouse": 100}
-            },
-            "TotalBossesPerMap": {
-                "factory": -1,
-                "factory_night": -1,
-                "customs": -1,
-                "woods": -1,
-                "shoreline": -1,
-                "lighthouse": -1,
-                "reserve": -1,
-                "interchange": -1,
-                "laboratory": -1,
-                "streets": -1
             },
             "CustomBosses": {
                 "santa": {
