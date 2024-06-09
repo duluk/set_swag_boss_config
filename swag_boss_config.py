@@ -82,8 +82,68 @@ class BossConfigApp:
                 "shturman": {"woods": 15},
                 "tagilla": {"factory": 35, "factory_night": 35},
                 "zryachiy": {"lighthouse": 100}
-            }
+            },
+#            "TotalBossesPerMap": {
+#                "factory": -1,
+#                "factory_night": -1,
+#                "customs": -1,
+#                "woods": -1,
+#                "shoreline": -1,
+#                "lighthouse": -1,
+#                "reserve": -1,
+#                "interchange": -1,
+#                "laboratory": -1,
+#                "streets": -1
+#            },
+#            "CustomBosses": {
+#                "santa": {
+#                    "enabled": True,
+#                    "forceSpawnOutsideEvent": False,
+#                    "customs": 0,
+#                    "factory": 0,
+#                    "factory_night": 0,
+#                    "groundzero": 0,
+#                    "interchange": 0,
+#                    "laboratory": 0,
+#                    "lighthouse": 0,
+#                    "reserve": 0,
+#                    "shoreline": 0,
+#                    "streets": 0,
+#                    "woods": 0
+#                },
+#                "punisher": {
+#                    "enabled": True,
+#                    "useProgressSpawnChance": True,
+#                    "customs": 0,
+#                    "factory": 0,
+#                    "factory_night": 0,
+#                    "groundzero": 0,
+#                    "interchange": 0,
+#                    "laboratory": 0,
+#                    "lighthouse": 0,
+#                    "reserve": 0,
+#                    "shoreline": 0,
+#                    "streets": 0,
+#                    "woods": 0
+#                },
+#                "legion": {
+#                    "enabled": False,
+#                    "useProgressSpawnChance": True,
+#                    "customs": 0,
+#                    "factory": 0,
+#                    "factory_night": 0,
+#                    "groundzero": 0,
+#                    "interchange": 0,
+#                    "laboratory": 0,
+#                    "lighthouse": 0,
+#                    "reserve": 0,
+#                    "shoreline": 0,
+#                    "streets": 0,
+#                    "woods": 0
+#                }
+#            }
         }
+
         # Initialize map chances to default settings
         self.fill_default_map_chances()
 
@@ -204,6 +264,8 @@ class BossConfigApp:
         self.defaults_button.grid(row=6, column=0, padx=10, pady=10, sticky="ew")
         create_tooltip(self.defaults_button, "Restore map spawn settings to the SWAG default (at least at the time of this coding)")
 
+    # If the file was loaded with a 0, make sure we have a 0 for all maps for
+    # each boss before writing the file
     def fill_default_map_chances(self):
         """ Ensures every boss has all maps defined, defaulting to 0 where not specified. """
         for boss in self.defaults['Bosses']:
@@ -245,11 +307,24 @@ class BossConfigApp:
     def load_defaults(self):
         self.config_data = json.loads(json.dumps(self.defaults))  # Deep copy defaults to config_data
         self.list_boss_chances()  # Update output box
-        messagebox.showinfo("Reset to Defaults", "Configuration has been reset to default settings.")
+#        messagebox.showinfo("Reset to Defaults", "Configuration has been reset to default settings.")
 
     def load_config_data(self):
         try:
             with open(self.config_file.get(), 'r') as file:
+              # At some point in my testing, my bossConfig.json file had only
+              # the Bosses section, not the CustomBosses or TotalBossesPerMap.
+              # I don't know how that happened, and I thought the config_data
+              # was not writing it out since it wasn't being used. But that
+              # shouldn't be the case. It should be loading whatever is in the
+              # file and changing only the Bosses section.
+              #
+              # This is one way to ensure that everything is correct. I added
+              # the other two sections to the defaults above. That's probably
+              # fine, especially when resetting to defaults. (I have a feeling
+              # that's where it went wrong)
+#                loaded_data = json.load(file)
+#                self.config_data = {**self.defaults, **loaded_data}
                 self.config_data = json.load(file)
             self.list_boss_chances()  # Automatically display the boss chances
         except Exception as e:
