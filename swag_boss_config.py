@@ -264,6 +264,11 @@ class BossConfigApp:
         self.defaults_button.grid(row=6, column=0, padx=10, pady=10, sticky="ew")
         create_tooltip(self.defaults_button, "Restore map spawn settings to the SWAG default (at least at the time of this coding)")
 
+        # Restore Backup button
+        self.restore_button = tk.Button(root, text="Restore Backup", command=self.restore_backup)
+        self.restore_button.grid(row=6, column=2, padx=10, pady=10, sticky="ew")
+        create_tooltip(self.restore_button, "Restore a backup configuration file.")
+
     # If the file was loaded with a 0, make sure we have a 0 for all maps for
     # each boss before writing the file
     def fill_default_map_chances(self):
@@ -446,6 +451,34 @@ class BossConfigApp:
                 messagebox.showerror("Error", f"Failed to save changes: {e}")
         else:
             messagebox.showerror("Error", "No configuration data loaded.")
+
+    def list_backups(self):
+        if not os.path.exists(self.backup_path):
+            return []
+        backups = [f for f in os.listdir(self.backup_path) if f.endswith('.bak')]
+        backups.sort(reverse=True)  # Sort by latest backups first
+        return backups
+
+    def restore_backup(self):
+        backups = self.list_backups()
+        if not backups:
+            messagebox.showinfo("No Backups", "No backups available to restore.\n\nIf you have not loaded a config first, then this message will also appear.\n\nSo if this message surprises you, try loading the config and then restoring. (the backups are stored in the same location as the config so the app needs to know where that is)")
+            return
+
+        # Open a dialog to select a backup file
+        backup_file = filedialog.askopenfilename(
+            initialdir=self.backup_path,
+            title="Select Backup to Restore",
+            filetypes=(("Backup files", "*.bak"), ("all files", "*.*"))
+        )
+
+        if backup_file:
+            try:
+                shutil.copy(backup_file, self.config_file_path)
+                self.load_config_data()  # Reload the restored configuration
+                messagebox.showinfo("Restore Success", f"Backup {os.path.basename(backup_file)} restored successfully.\n\nNOTE: Contents will appear in the output box - the changes will not be fully restored until Save Changes is clicked")
+            except Exception as e:
+                messagebox.showerror("Restore Error", f"Failed to restore backup: {e}")
 
 # Main
 if __name__ == "__main__":
