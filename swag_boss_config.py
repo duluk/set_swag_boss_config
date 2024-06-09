@@ -166,7 +166,7 @@ class BossConfigApp:
         self.all_bosses_chance_entry.grid(row=2, column=2, padx=10, pady=10, sticky="ew")
         self.set_all_bosses_chance_button = tk.Button(root, text="Set Chance for All Bosses", command=self.set_chance_for_all_bosses)
         self.set_all_bosses_chance_button.grid(row=2, column=3, padx=10, pady=10, sticky="w")
-        create_tooltip(self.modify_label, "For the selected map, set all bosses to 100% spawn chance. If 'all' is selected, then of course all bosses on all maps will be set to 100%")
+        create_tooltip(self.modify_label, "For the selected map, set all bosses to the specified spawn chance. If 'all' is selected, then of course all bosses on all maps will be set that chance")
 
         # Set Chance for Boss and Map
         self.set_chance_label = tk.Label(root, text="Set Chance for Boss and Map:")
@@ -264,6 +264,7 @@ class BossConfigApp:
             messagebox.showerror("Error", "No configuration data loaded.")
 
     def set_chance_for_all_bosses(self):
+
         if self.config_data:
             map_name = self.map_entry.get()
             chance = int(self.all_bosses_chance_entry.get())
