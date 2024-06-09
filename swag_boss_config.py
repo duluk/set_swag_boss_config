@@ -254,20 +254,35 @@ class BossConfigApp:
         self.output_text = tk.Text(root, height=15, width=80)
         self.output_text.grid(row=5, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
 
+        # Notification Label
+#        self.status_label = tk.Label(root, text="Status:", anchor="w")
+#        self.status_label.grid(row=6, column=0, padx=10, pady=10, sticky="w")
+        # Remove anchor="w" to center the text
+        self.notification_label = tk.Label(root, text="", fg="blue", anchor="w")
+        self.notification_label.grid(row=6, column=0, columnspan=4, padx=10, pady=10, sticky="ew")
+
+        # Output Text View Selection
+        self.view_var = tk.StringVar(value="Boss View")
+        self.view_label = tk.Label(root, text="Select View:")
+        self.view_label.grid(row=7, column=0, padx=10, pady=10, sticky="w")
+        self.view_option_menu = ttk.OptionMenu(root, self.view_var, "Boss View", "Boss View", "Map View", command=self.list_boss_chances)
+        self.view_option_menu.grid(row=7, column=1, padx=10, pady=10, sticky="ew")
+        create_tooltip(self.view_label, "Display output for each boss or each map")
+
         # Save Changes button
         self.save_button = tk.Button(root, text="Save Changes", command=self.save_changes)
-        self.save_button.grid(row=6, column=1, padx=10, pady=10, sticky="ew")
+        self.save_button.grid(row=7, column=3, padx=10, pady=10, sticky="ew")
         create_tooltip(self.save_button, "Write the changes to file. Any maps not shown will be set to 0. A backup will be created in the same directory as the config file.")
 
         # Default button
         self.defaults_button = tk.Button(root, text="Defaults", command=self.load_defaults)
-        self.defaults_button.grid(row=6, column=0, padx=10, pady=10, sticky="ew")
+        self.defaults_button.grid(row=7, column=2, padx=10, pady=10, sticky="ew")
         create_tooltip(self.defaults_button, "Restore map spawn settings to the SWAG default (at least at the time of this coding)")
 
         # Restore Backup button
         self.restore_button = tk.Button(root, text="Restore Backup", command=self.restore_backup)
-        self.restore_button.grid(row=6, column=2, padx=10, pady=10, sticky="ew")
-        create_tooltip(self.restore_button, "Restore a backup configuration file.")
+        self.restore_button.grid(row=7, column=4, padx=10, pady=10, sticky="ew")
+        create_tooltip(self.restore_button, "Restore a backup configuration file")
 
     # If the file was loaded with a 0, make sure we have a 0 for all maps for
     # each boss before writing the file
@@ -310,8 +325,23 @@ class BossConfigApp:
                 os.remove(os.path.join(self.backup_path, old_backup))
 
     def load_defaults(self):
-        self.config_data = json.loads(json.dumps(self.defaults))  # Deep copy defaults to config_data
-        self.list_boss_chances()  # Update output box
+        if self.config_data is None:
+            self.config_data = {}
+
+        # Only update the "Bosses" section of config_data with defaults;
+        # Deep copy to avoid unintentional mutation
+        self.config_data['Bosses'] = json.loads(json.dumps(self.defaults['Bosses']))
+    
+        # Preserve other sections TotalBossesPerMap and CustomBosses if not
+        # present
+        if 'TotalBossesPerMap' not in self.config_data:
+            self.config_data['TotalBossesPerMap'] = json.loads(json.dumps(self.defaults['TotalBossesPerMap']))
+        if 'CustomBosses' not in self.config_data:
+            self.config_data['CustomBosses'] = json.loads(json.dumps(self.defaults['CustomBosses']))
+
+        # Update display
+        self.list_boss_chances()  
+        self.notification_label.config(text="Boss configurations have been reset to default settings")
 
     def load_config_data(self):
         try:
@@ -326,8 +356,9 @@ class BossConfigApp:
             self.config_data['Bosses']['useGlobalBossSpawnChance'] = True
             self.list_boss_chances()  # Update the output box
             self.update_global_button_color()
+            self.notification_label.config(text="Global Boss Spawn Chance set to True")
         else:
-            messagebox.showerror("Error", "No configuration data loaded.")
+            messagebox.showerror("Error", "No configuration data loaded")
 
     def set_chance_for_all_bosses(self):
 
@@ -337,7 +368,7 @@ class BossConfigApp:
     
             # Validate the input chance
             if not 0 <= chance <= 100:
-                messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100.")
+                messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100")
                 return
             # If valid, process setting the chance
             #print(f"Setting chance for all bosses on map {map_name} to {chance}%")
@@ -354,7 +385,7 @@ class BossConfigApp:
                         self.config_data['Bosses'][boss][map_name] = chance
             self.list_boss_chances()  # Update the output box
         else:
-            messagebox.showerror("Error", "No configuration data loaded.")
+            messagebox.showerror("Error", "No configuration data loaded")
 
         self.map_entry.set('')
         self.all_bosses_chance_entry.delete(0, tk.END)
@@ -374,7 +405,7 @@ class BossConfigApp:
 #                        self.config_data['Bosses'][boss][map_name] = 100
 #            self.list_boss_chances()  # Update the output box
 #        else:
-#            messagebox.showerror("Error", "No configuration data loaded.")
+#            messagebox.showerror("Error", "No configuration data loaded")
 #
 #        self.map_entry.set('')
 
@@ -386,7 +417,7 @@ class BossConfigApp:
                 chance = int(self.chance_entry.get())
                 # Validate the input chance
                 if not 0 <= chance <= 100:
-                    messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100.")
+                    messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100")
                     return
 
                 if boss in self.config_data['Bosses'] and map_name in self.config_data['Bosses'][boss]:
@@ -395,9 +426,9 @@ class BossConfigApp:
                 else:
                     messagebox.showerror("Error", f"Invalid boss or map: {boss}, {map_name}")
             except ValueError:
-                messagebox.showerror("Error", "Chance must be an integer.")
+                messagebox.showerror("Error", "Chance must be an integer")
         else:
-            messagebox.showerror("Error", "No configuration data loaded.")
+            messagebox.showerror("Error", "No configuration data loaded")
 
         self.boss_entry.set('')
         self.map_for_chance_entry.set('')
@@ -409,7 +440,7 @@ class BossConfigApp:
                 new_chance = int(self.existing_chance_entry.get())
                 # Validate the input chance
                 if not new_chance.isdigit() or not 0 <= new_chance <= 100:
-                    messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100.")
+                    messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100")
                     return
 
                 for boss, maps in self.config_data['Bosses'].items():
@@ -419,26 +450,56 @@ class BossConfigApp:
                                 maps[map_name] = new_chance
                 self.list_boss_chances()  # Update the output box
             except ValueError:
-                messagebox.showerror("Error", "Chance must be an integer.")
+                messagebox.showerror("Error", "Chance must be an integer")
         else:
-            messagebox.showerror("Error", "No configuration data loaded.")
+            messagebox.showerror("Error", "No configuration data loaded")
 
         self.existing_chance_entry.delete(0, tk.END)
 
-    def list_boss_chances(self):
+#    def list_boss_chances(self):
+#        if self.config_data:
+#            output = ""
+#            for boss, maps in self.config_data['Bosses'].items():
+#                if isinstance(maps, dict):
+#                    non_zero_chances = {k: v for k, v in maps.items() if v != 0}
+#                    if non_zero_chances:
+#                        output += f"{boss}:\n"
+#                        for map_name, chance in non_zero_chances.items():
+#                            output += f"  {map_name}: {chance}\n"
+#            self.output_text.delete("1.0", tk.END)
+#            self.output_text.insert(tk.END, output)
+#        else:
+#            messagebox.showerror("Error", "No configuration data loaded")
+
+    def list_boss_chances(self, *args):
         if self.config_data:
             output = ""
-            for boss, maps in self.config_data['Bosses'].items():
-                if isinstance(maps, dict):
-                    non_zero_chances = {k: v for k, v in maps.items() if v != 0}
-                    if non_zero_chances:
-                        output += f"{boss}:\n"
-                        for map_name, chance in non_zero_chances.items():
-                            output += f"  {map_name}: {chance}\n"
+            if self.view_var.get() == "Boss View":
+                for boss, maps in self.config_data['Bosses'].items():
+                    if isinstance(maps, dict):
+                        non_zero_chances = {k: v for k, v in maps.items() if v != 0}
+                        if non_zero_chances:
+                            output += f"{boss}:\n"
+                            for map_name, chance in non_zero_chances.items():
+                                output += f"  {map_name}: {chance}\n"
+            elif self.view_var.get() == "Map View":
+                map_dict = {}
+                for boss, maps in self.config_data['Bosses'].items():
+                    if isinstance(maps, dict):
+                        for map_name, chance in maps.items():
+                            if chance != 0:
+                                if map_name not in map_dict:
+                                    map_dict[map_name] = {}
+                                map_dict[map_name][boss] = chance
+                for map_name, bosses in map_dict.items():
+                    output += f"{map_name}:\n"
+                    for boss, chance in bosses.items():
+                        output += f"  {boss}: {chance}\n"
+    
             self.output_text.delete("1.0", tk.END)
             self.output_text.insert(tk.END, output)
         else:
-            messagebox.showerror("Error", "No configuration data loaded.")
+            messagebox.showerror("Error", "No configuration data loaded")
 
     def save_changes(self):
         self.backup_config()  # Backup before saving
@@ -446,11 +507,13 @@ class BossConfigApp:
             try:
                 with open(self.config_file_path, 'w') as file:
                     json.dump(self.config_data, file, indent=4)
-                messagebox.showinfo("Success", "Changes saved successfully.")
+                # I want the pop-up box for saving changes
+                messagebox.showinfo("Success", "Changes saved successfully")
+                self.notification_label.config(text="Changes saved successfully")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save changes: {e}")
         else:
-            messagebox.showerror("Error", "No configuration data loaded.")
+            messagebox.showerror("Error", "No configuration data loaded")
 
     def list_backups(self):
         if not os.path.exists(self.backup_path):
