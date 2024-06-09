@@ -8,7 +8,25 @@ from   tkinter import filedialog, messagebox, ttk
 import json
 import os
 import shutil
+import winreg
 from   datetime import datetime
+
+def read_registry_value(key, subkey, value_name):
+    try:
+        registry_key = winreg.OpenKey(key, subkey, 0, winreg.KEY_READ)
+        value, regtype = winreg.QueryValueEx(registry_key, value_name)
+        winreg.CloseKey(registry_key)
+        return value
+    except WindowsError:
+        return None
+
+def write_registry_value(key, subkey, value_name, value):
+    try:
+        registry_key = winreg.CreateKey(key, subkey)
+        winreg.SetValueEx(registry_key, value_name, 0, winreg.REG_SZ, value)
+        winreg.CloseKey(registry_key)
+    except WindowsError as e:
+        print(f"Error writing to registry: {e}")
 
 class ToolTip(object):
     def __init__(self, widget):
@@ -52,7 +70,7 @@ def create_tooltip(widget, text):
 class BossConfigApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("SWAG bossConfig.json Configurator")
+        self.root.title("SWAG Boss Config Editor")
         self.config_data = None
         self.config_file_path = ""
         self.backup_path = ""
@@ -283,6 +301,55 @@ class BossConfigApp:
         self.restore_button = tk.Button(root, text="Restore Backup", command=self.restore_backup)
         self.restore_button.grid(row=7, column=4, padx=10, pady=10, sticky="ew")
         create_tooltip(self.restore_button, "Restore a backup configuration file")
+
+        REG_PATH = r"SOFTWARE\SWAG Boss Config Editor"
+        REG_VALUE_NAME = "ShowStartupMessage"
+
+        show_message = read_registry_value(winreg.HKEY_CURRENT_USER, REG_PATH, REG_VALUE_NAME)
+        if show_message != "False":
+            self.show_startup_message()
+
+    def show_startup_message(self):
+        message_window = tk.Toplevel(self.root)
+        message_window.title("Welcome")
+
+        # Make sure it stays on top
+        message_window.attributes('-topmost', True)
+
+        # Center the startup message over the application
+        self.center_window(message_window, 320, 150)
+
+        message_label = tk.Message(message_window, text="This application is for editing the SWAG bossConfig.json file. Currently all it really does is allow modification of the Bosses section.", width=300)
+        message_label.pack(padx=10,pady=10)
+
+        self.dont_show_var = tk.BooleanVar()
+        dont_show_checkbox = tk.Checkbutton(message_window, text="Don't show this again", variable=self.dont_show_var)
+        dont_show_checkbox.pack(pady=5)
+
+        ok_button = tk.Button(message_window, text="OK", command=lambda: self.close_message_window(message_window))
+        ok_button.pack(pady=10)
+
+    def center_window(self, window, width, height):
+        # Ensure the main window dimensions are updated
+        self.root.update_idletasks()
+
+        # Get the main application window's position and size
+        app_x = self.root.winfo_rootx()
+        app_y = self.root.winfo_rooty()
+        app_width = self.root.winfo_width()
+        app_height = self.root.winfo_height()
+
+        # Calculate the position to center the window
+        pos_x = app_x + (app_width // 2) - (width // 2)
+        pos_y = app_y + (app_height // 2) - (height // 2)
+
+        # Set the position of the window
+        window.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
+
+    def close_message_window(self, window):
+        if self.dont_show_var.get():
+            write_registry_value(winreg.HKEY_CURRENT_USER, REG_PATH, REG_VALUE_NAME, "False")
+        window.destroy()
 
     # If the file was loaded with a 0, make sure we have a 0 for all maps for
     # each boss before writing the file
