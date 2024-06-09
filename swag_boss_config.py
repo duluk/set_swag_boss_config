@@ -104,6 +104,7 @@ class BossConfigApp:
         self.set_global_button = tk.Button(root, text="Set Global Boss Spawn Chance to True", command=self.set_global_spawn_chance_true)
         self.set_global_button.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="ew")
         create_tooltip(self.set_global_button, "In order for the values in this file to be used, this setting must be set to true")
+        self.update_global_button_color()
 
         # Modify All Bosses
         self.modify_label = tk.Label(root, text="Modify All Bosses for Map:")
@@ -158,6 +159,13 @@ class BossConfigApp:
                     if map_name not in self.defaults['Bosses'][boss]:
                         self.defaults['Bosses'][boss][map_name] = 0  # Set default chance to 0
 
+    def update_global_button_color(self):
+        if self.config_data:
+            if not self.config_data["Bosses"].get("useGlobalBossSpawnChance", False):
+                self.set_global_button.configure(bg='yellow')
+            else:
+                self.set_global_button.configure(bg='SystemButtonFace')
+
     def browse_file(self):
         filename = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
         if filename:
@@ -167,6 +175,7 @@ class BossConfigApp:
             if not os.path.exists(self.backup_path):
                 os.makedirs(self.backup_path)
             self.load_config_data()
+            self.update_global_button_color()
 
     def backup_config(self):
         if self.config_file_path:
@@ -197,6 +206,7 @@ class BossConfigApp:
         if self.config_data:
             self.config_data['Bosses']['useGlobalBossSpawnChance'] = True
             self.list_boss_chances()  # Update the output box
+            self.update_global_button_color()
         else:
             messagebox.showerror("Error", "No configuration data loaded.")
 
@@ -217,6 +227,8 @@ class BossConfigApp:
         else:
             messagebox.showerror("Error", "No configuration data loaded.")
 
+        self.map_entry.set('')
+
     def set_chance(self):
         if self.config_data:
             boss = self.boss_entry.get()
@@ -233,6 +245,10 @@ class BossConfigApp:
         else:
             messagebox.showerror("Error", "No configuration data loaded.")
 
+        self.boss_entry.set('')
+        self.map_for_chance_entry.set('')
+        self.chance_entry.delete(0, tk.END)
+
     def set_existing_chances(self):
         if self.config_data:
             try:
@@ -247,6 +263,8 @@ class BossConfigApp:
                 messagebox.showerror("Error", "Chance must be an integer.")
         else:
             messagebox.showerror("Error", "No configuration data loaded.")
+
+        self.existing_chance_entry.delete(0, tk.END)
 
     def list_boss_chances(self):
         if self.config_data:
