@@ -106,16 +106,69 @@ class BossConfigApp:
         create_tooltip(self.set_global_button, "In order for the values in this file to be used, this setting must be set to true")
         self.update_global_button_color()
 
-        # Modify All Bosses
-        self.modify_label = tk.Label(root, text="Modify All Bosses for Map:")
+
+#################################
+
+#        # Widgets for setting chances for all bosses on a map
+#        ttk.Label(root, text="Set All Bosses for Map:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
+#        map_combo = ttk.Combobox(root, values=self.valid_maps, width=20)
+#        map_combo.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+#        chance_entry = tk.Entry(root, width=10)
+#        chance_entry.grid(row=2, column=2, padx=10, pady=10, sticky="ew")
+#        ttk.Button(root, text="Set Chance", command=lambda: self.set_all_bosses(map_combo.get(), chance_entry.get())).grid(row=2, column=3, padx=10, pady=10)
+#
+#        # Widgets for setting chance for a specific boss and map
+#        ttk.Label(root, text="Set Chance for Boss and Map:").grid(row=3, column=0, padx=10, pady=10, sticky="w")
+#        boss_combo = ttk.Combobox(root, values=self.valid_bosses, width=20)
+#        boss_combo.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
+#        map_specific_combo = ttk.Combobox(root, values=self.valid_maps, width=20)
+#        map_specific_combo.grid(row=3, column=2, padx=10, pady=10, sticky="ew")
+#        specific_chance_entry = tk.Entry(root, width=10)
+#        specific_chance_entry.grid(row=3, column=3, padx=10, pady=10)
+#        ttk.Button(root, text="Set Chance", command=lambda: self.set_specific_boss(boss_combo.get(), map_specific_combo.get(), specific_chance_entry.get())).grid(row=3, column=4, padx=10, pady=10)
+
+#################################
+
+# TODO: incorporate this perhaps, with more labels for boxes
+#        # Combobox for selecting a map
+#        ttk.Label(root, text="Select Map for All Bosses:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+#        self.map_combo = ttk.Combobox(root, values=["customs", "factory", "woods"], width=20)
+#        self.map_combo.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+#
+#        # Entry for entering the chance for all bosses
+#        ttk.Label(root, text="Chance for All Bosses:").grid(row=0, column=2, padx=10, pady=10, sticky="w")
+#        self.all_bosses_chance_entry = tk.Entry(root, width=10)
+#        self.all_bosses_chance_entry.grid(row=0, column=3, padx=10, pady=10)
+#
+#        # Combobox for selecting a specific boss
+#        ttk.Label(root, text="Select Boss:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
+#        self.boss_combo = ttk.Combobox(root, values=["Boss1", "Boss2", "Boss3"], width=20)
+#        self.boss_combo.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+#
+#        # Combobox for selecting a map for a specific boss
+#        ttk.Label(root, text="Select Map for Boss:").grid(row=1, column=2, padx=10, pady=10, sticky="w")
+#        self.map_specific_combo = ttk.Combobox(root, values=["customs", "factory", "woods"], width=20)
+#        self.map_specific_combo.grid(row=1, column=3, padx=10, pady=10, sticky="ew")
+#
+#        # Entry for entering the chance for a specific boss
+#        ttk.Label(root, text="Chance for Boss:").grid(row=1, column=4, padx=10, pady=10, sticky="w")
+#        self.chance_entry = tk.Entry(root, width=10)
+#        self.chance_entry.grid(row=1, column=5, padx=10, pady=10)
+
+#################################
+
+        # Set All Bosses for Map
+        self.modify_label = tk.Label(root, text="Set All Bosses for Map:")
         self.modify_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
         self.map_entry = ttk.Combobox(root, values=self.map_options, width=20)
         self.map_entry.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
-        self.modify_button = tk.Button(root, text="Modify", command=self.modify_allbosses)
-        self.modify_button.grid(row=2, column=2, padx=10, pady=10, sticky="w")
+        self.all_bosses_chance_entry = tk.Entry(root, width=10)
+        self.all_bosses_chance_entry.grid(row=2, column=2, padx=10, pady=10, sticky="ew")
+        self.set_all_bosses_chance_button = tk.Button(root, text="Set Chance for All Bosses", command=self.set_chance_for_all_bosses)
+        self.set_all_bosses_chance_button.grid(row=2, column=3, padx=10, pady=10, sticky="w")
         create_tooltip(self.modify_label, "For the selected map, set all bosses to 100% spawn chance. If 'all' is selected, then of course all bosses on all maps will be set to 100%")
 
-        # Set Chance
+        # Set Chance for Boss and Map
         self.set_chance_label = tk.Label(root, text="Set Chance for Boss and Map:")
         self.set_chance_label.grid(row=3, column=0, padx=10, pady=10, sticky="w")
         self.boss_entry = ttk.Combobox(root, values=self.valid_bosses, width=20)
@@ -123,7 +176,7 @@ class BossConfigApp:
         self.map_for_chance_entry = ttk.Combobox(root, values=self.valid_maps, width=20)
         self.map_for_chance_entry.grid(row=3, column=2, padx=10, pady=10, sticky="ew")
         self.chance_entry = tk.Entry(root, width=5)
-        self.chance_entry.grid(row=3, column=3, padx=10, pady=10, sticky="w")
+        self.chance_entry.grid(row=3, column=3, padx=10, pady=10, sticky="ew")
         self.set_chance_button = tk.Button(root, text="Set Chance", command=self.set_chance)
         self.set_chance_button.grid(row=3, column=4, padx=10, pady=10, sticky="w")
         create_tooltip(self.set_chance_label, "For the selected boss on the selected map, set the spawn chance to the specified amount")
@@ -210,9 +263,19 @@ class BossConfigApp:
         else:
             messagebox.showerror("Error", "No configuration data loaded.")
 
-    def modify_allbosses(self):
+    def set_chance_for_all_bosses(self):
+
         if self.config_data:
             map_name = self.map_entry.get()
+            chance = int(self.all_bosses_chance_entry.get())
+    
+            # Validate the input chance
+            if not 0 <= chance <= 100:
+                messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100.")
+                return
+            # If valid, process setting the chance
+            #print(f"Setting chance for all bosses on map {map_name} to {chance}%")
+
             if map_name == "all":
                 for boss in self.config_data['Bosses']:
                     if isinstance(self.config_data['Bosses'][boss], dict):
@@ -228,6 +291,26 @@ class BossConfigApp:
             messagebox.showerror("Error", "No configuration data loaded.")
 
         self.map_entry.set('')
+        self.all_bosses_chance_entry.delete(0, tk.END)
+
+#    def modify_allbosses(self):
+#        if self.config_data:
+#            map_name = self.map_entry.get()
+#            if map_name == "all":
+#                for boss in self.config_data['Bosses']:
+#                    if isinstance(self.config_data['Bosses'][boss], dict):
+#                        for valid_map in self.valid_maps:
+#                            if valid_map != "all" and valid_map in self.config_data['Bosses'][boss]:
+#                                self.config_data['Bosses'][boss][valid_map] = 100
+#            else:
+#                for boss in self.config_data['Bosses']:
+#                    if isinstance(self.config_data['Bosses'][boss], dict) and map_name in self.config_data['Bosses'][boss]:
+#                        self.config_data['Bosses'][boss][map_name] = 100
+#            self.list_boss_chances()  # Update the output box
+#        else:
+#            messagebox.showerror("Error", "No configuration data loaded.")
+#
+#        self.map_entry.set('')
 
     def set_chance(self):
         if self.config_data:
@@ -235,6 +318,11 @@ class BossConfigApp:
             map_name = self.map_for_chance_entry.get()
             try:
                 chance = int(self.chance_entry.get())
+                # Validate the input chance
+                if not 0 <= chance <= 100:
+                    messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100.")
+                    return
+
                 if boss in self.config_data['Bosses'] and map_name in self.config_data['Bosses'][boss]:
                     self.config_data['Bosses'][boss][map_name] = chance
                     self.list_boss_chances()  # Update the output box
@@ -253,6 +341,11 @@ class BossConfigApp:
         if self.config_data:
             try:
                 new_chance = int(self.existing_chance_entry.get())
+                # Validate the input chance
+                if not new_chance.isdigit() or not 0 <= new_chance <= 100:
+                    messagebox.showerror("Invalid Input", "Please enter a valid chance from 0 to 100.")
+                    return
+
                 for boss, maps in self.config_data['Bosses'].items():
                     if isinstance(maps, dict):
                         for map_name in maps:
